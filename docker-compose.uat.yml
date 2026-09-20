@@ -1,0 +1,50 @@
+name: team-saas-uat
+
+services:
+  app:
+    build:
+      context: .
+    image: team-saas:uat
+    container_name: team-saas-uat-app
+    environment:
+      TEAMSAAS_DB: /data/team.db
+      TEAMSAAS_SECURE_COOKIE: "0"
+    ports:
+      - "8001:8000"
+    volumes:
+      - team_saas_uat_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=3)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      n8n:
+        condition: service_started
+
+  n8n:
+    image: n8nio/n8n:v3-nightly-20260920-pc
+    container_name: team-saas-uat-n8n
+    environment:
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      N8N_SECURE_COOKIE: "false"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      GENERIC_TIMEZONE: Africa/Cairo
+      TZ: Africa/Cairo
+    ports:
+      - "3984:5678"
+    volumes:
+      - team_saas_uat_n8n:/home/node/.n8n
+    restart: unless-stopped
+
+volumes:
+  team_saas_uat_data:
+  team_saas_uat_n8n:
+
