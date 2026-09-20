@@ -1,0 +1,22 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Python
+        run: python -m py_compile server.py
+      - name: Health endpoint smoke test
+        run: python - <<'PY'
+import server
+assert server.MAX_REQUEST_BYTES == 32768
+print("server import OK")
+PY
