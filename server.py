@@ -8,6 +8,9 @@ import re
 import secrets
 import sqlite3
 import time
+from collections import defaultdict, deque
+from threading import Lock
+from urllib.request import Request, urlopen
 from datetime import date, timedelta
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -16,6 +19,11 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get('TEAMSAAS_DB', str(ROOT / 'data' / 'team.db')))
 SESSION_AGE = 7 * 86400
+MAX_REQUEST_BYTES = 32768
+RATE_WINDOW = 300
+RATE_LIMIT = 12
+_rate_lock = Lock()
+_rate_hits = defaultdict(deque)
 
 
 def connect():
@@ -60,6 +68,18 @@ class ApiError(Exception):
         self.message, self.status = message, status
 
 
+def rate_limited(key):
+    now = time.time()
+    with _rate_lock:
+        hits = _rate_hits[key]
+        while hits and hits[0] <= now - RATE_WINDOW:
+            hits.popleft()
+        if len(hits) >= RATE_LIMIT:
+            return True
+        hits.append(now)
+        return False
+
+
 def field(data, key, maximum=160, required=True):
     value = data.get(key, '')
     if not isinstance(value, str):
@@ -79,6 +99,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Cache-Control', 'no-store')
         self.send_header('X-Content-Type-Options', 'nosniff')
+        self.send_header('Referrer-Policy', 'same-origin')
+        self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
         self.send_header('Content-Length', str(len(payload)))
         if cookie:
             self.send_header('Set-Cookie', cookie)
@@ -119,12 +141,20 @@ class Handler(BaseHTTPRequestHandler):
         db.execute('DELETE FROM sessions WHERE expires<?', (time.time(),))
         db.execute('INSERT INTO sessions VALUES(?,?,?,?,?)', (digest(token), user_id, workspace_id, csrf, time.time() + SESSION_AGE))
         cookie = 'gather_session=' + token + '; HttpOnly; SameSite=Lax; Path=/; Max-Age=' + str(SESSION_AGE)
-        if os.environ.get('TEAMSAAS_SECURE_COOKIE') == '1':
+        if os.environ.get('TEAMSAAS_SECURE_COOKIE', '1') == '1':
             cookie += '; Secure'
         return cookie
 
     def do_GET(self):
         path = urlparse(self.path).path
+        if path == '/healthz':
+            try:
+                with connect() as db:
+                    db.execute('SELECT 1').fetchone()
+                self.send_json({'status': 'ok'})
+            except Exception:
+                self.send_json({'status': 'error'}, 503)
+            return
         if path.startswith('/api/'):
             try:
                 with connect() as db:
@@ -156,7 +186,7 @@ class Handler(BaseHTTPRequestHandler):
             if origin and origin not in ('http://' + self.headers.get('Host', ''), 'https://' + self.headers.get('Host', '')):
                 raise ApiError('Request origin is not allowed.', 403)
             length = int(self.headers.get('Content-Length', '0'))
-            if length <= 0 or length > 32768:
+            if length <= 0 or length > MAX_REQUEST_BYTES:
                 raise ApiError('Invalid request size.', 413)
             data = json.loads(self.rfile.read(length))
             if not isinstance(data, dict):
@@ -176,6 +206,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def handle_post(self, db, path, data):
         if path in ('/api/register', '/api/demo', '/api/login'):
+            if rate_limited('auth:' + (self.client_address[0] if self.client_address else 'unknown')):
+                raise ApiError('Too many sign-in attempts. Try again in a few minutes.', 429)
             if path == '/api/login':
                 email = field(data, 'email', 254).lower()
                 password = field(data, 'password', 128)
@@ -211,6 +243,22 @@ class Handler(BaseHTTPRequestHandler):
         if not hmac.compare_digest(self.headers.get('X-CSRF-Token', ''), s['csrf']):
             raise ApiError('Session validation failed. Refresh and try again.', 403)
         wid = s['workspace_id']
+        if path == '/api/n8n/webhook':
+            webhook = os.environ.get('TEAMSAAS_N8N_WEBHOOK_URL', '').strip()
+            if not webhook.startswith(('http://', 'https://')):
+                raise ApiError('n8n webhook is not configured.', 503)
+            try:
+                payload = json.dumps({'event': 'workspace.test', 'workspace_id': wid, 'actor': s['name'], 'data': data}).encode()
+                request = Request(webhook, data=payload, headers={'Content-Type': 'application/json'}, method='POST')
+                with urlopen(request, timeout=10) as response:
+                    if response.status >= 400:
+                        raise ApiError('n8n webhook rejected the event.', 502)
+            except ApiError:
+                raise
+            except Exception:
+                raise ApiError('Could not reach the n8n webhook.', 502)
+            self.log_activity(db, s, 'sent a test event to n8n')
+            return self.state(db, self.auth(db)), None
         if path == '/api/logout':
             db.execute('DELETE FROM sessions WHERE token=?', (s['token'],))
             return {'ok': True}, 'gather_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0'
