@@ -1,0 +1,2 @@
+# The runtime uses Python's standard library.
+# CI performs syntax and import checks without third-party runtime dependencies.
