@@ -11,7 +11,7 @@ services:
       TEAMSAAS_SECURE_COOKIE: "0"
       TEAMSAAS_N8N_WEBHOOK_URL: ""
     ports:
-      - "8001:8000"
+      - "127.0.0.1:8001:8000"
     volumes:
       - team_saas_uat_data:/data
     restart: unless-stopped
@@ -39,7 +39,7 @@ services:
       GENERIC_TIMEZONE: Africa/Cairo
       TZ: Africa/Cairo
     ports:
-      - "3984:5678"
+      - "127.0.0.1:3984:5678"
     volumes:
       - team_saas_uat_n8n:/home/node/.n8n
     restart: unless-stopped
