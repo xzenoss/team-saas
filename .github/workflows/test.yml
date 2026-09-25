@@ -4,8 +4,11 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  syntax:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,9 +17,5 @@ jobs:
           python-version: "3.12"
       - name: Compile Python
         run: python -m py_compile server.py
-      - name: Health endpoint smoke test
-        run: python - <<'PY'
-import server
-assert server.MAX_REQUEST_BYTES == 32768
-print("server import OK")
-PY
+      - name: Run HTTP and tenant isolation tests
+        run: python -m unittest discover -s tests -v
