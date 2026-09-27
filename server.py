@@ -46,6 +46,46 @@ def initialize():
         CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY, workspace_id TEXT REFERENCES workspaces(id), project_id TEXT REFERENCES projects(id) ON DELETE CASCADE, title TEXT NOT NULL, description TEXT NOT NULL, status TEXT NOT NULL, priority TEXT NOT NULL, assignee_id TEXT REFERENCES users(id), due TEXT NOT NULL, created REAL NOT NULL);
         CREATE TABLE IF NOT EXISTS invites(token TEXT PRIMARY KEY, workspace_id TEXT REFERENCES workspaces(id), expires REAL NOT NULL, created_by TEXT REFERENCES users(id));
         CREATE TABLE IF NOT EXISTS activity(id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id TEXT REFERENCES workspaces(id), actor TEXT NOT NULL, message TEXT NOT NULL, created REAL NOT NULL);
+
+        CREATE TRIGGER IF NOT EXISTS tasks_project_workspace_insert
+        BEFORE INSERT ON tasks
+        FOR EACH ROW
+        WHEN NOT EXISTS (
+            SELECT 1 FROM projects p WHERE p.id = NEW.project_id AND p.workspace_id = NEW.workspace_id
+        )
+        BEGIN
+            SELECT RAISE(ABORT, 'task_project_workspace_mismatch');
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS tasks_project_workspace_update
+        BEFORE UPDATE OF project_id, workspace_id ON tasks
+        FOR EACH ROW
+        WHEN NOT EXISTS (
+            SELECT 1 FROM projects p WHERE p.id = NEW.project_id AND p.workspace_id = NEW.workspace_id
+        )
+        BEGIN
+            SELECT RAISE(ABORT, 'task_project_workspace_mismatch');
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS tasks_assignee_workspace_insert
+        BEFORE INSERT ON tasks
+        FOR EACH ROW
+        WHEN NEW.assignee_id IS NOT NULL AND NOT EXISTS (
+            SELECT 1 FROM members m WHERE m.user_id = NEW.assignee_id AND m.workspace_id = NEW.workspace_id
+        )
+        BEGIN
+            SELECT RAISE(ABORT, 'task_assignee_workspace_mismatch');
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS tasks_assignee_workspace_update
+        BEFORE UPDATE OF assignee_id, workspace_id ON tasks
+        FOR EACH ROW
+        WHEN NEW.assignee_id IS NOT NULL AND NOT EXISTS (
+            SELECT 1 FROM members m WHERE m.user_id = NEW.assignee_id AND m.workspace_id = NEW.workspace_id
+        )
+        BEGIN
+            SELECT RAISE(ABORT, 'task_assignee_workspace_mismatch');
+        END;
         ''')
 
 
@@ -371,4 +411,3 @@ if __name__ == '__main__':
     initialize()
     print('Gather is running at http://' + args.host + ':' + str(args.port), flush=True)
     ThreadingHTTPServer((args.host, args.port), Handler).serve_forever()
-
