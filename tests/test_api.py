@@ -1,6 +1,7 @@
 import http.client
 import json
 from pathlib import Path
+import sqlite3
 import tempfile
 import threading
 import unittest
@@ -71,6 +72,27 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.request('/api/tasks/delete', {'id':tid}, b, sb['csrf'])[0], 404)
         self.assertEqual(self.request('/api/state', cookie=b)[1]['projects'], [])
         self.assertEqual(len(self.request('/api/state', cookie=a)[1]['tasks']), 1)
+
+    def test_database_rejects_cross_workspace_task_relations(self):
+        workspace_a, workspace_b = server.uid(), server.uid()
+        user_a, user_b = server.uid(), server.uid()
+        project_a = server.uid()
+        with server.connect() as db:
+            db.execute('INSERT INTO workspaces VALUES(?,?)', (workspace_a, 'A'))
+            db.execute('INSERT INTO workspaces VALUES(?,?)', (workspace_b, 'B'))
+            db.execute('INSERT INTO users VALUES(?,?,?,?)', (user_a, 'A', user_a+'@example.test', server.hash_password('synthetic-password-123')))
+            db.execute('INSERT INTO users VALUES(?,?,?,?)', (user_b, 'B', user_b+'@example.test', server.hash_password('synthetic-password-123')))
+            db.execute('INSERT INTO members VALUES(?,?,?)', (workspace_a, user_a, 'owner'))
+            db.execute('INSERT INTO members VALUES(?,?,?)', (workspace_b, user_b, 'owner'))
+            db.execute('INSERT INTO projects VALUES(?,?,?,?,?,?)', (project_a, workspace_a, 'A project', '', 'blue', 1.0))
+
+        with server.connect() as db:
+            with self.assertRaises(sqlite3.IntegrityError):
+                db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?,?)', (server.uid(), workspace_b, project_a, 'Cross project', '', 'todo', 'low', None, '', 1.0))
+
+        with server.connect() as db:
+            with self.assertRaises(sqlite3.IntegrityError):
+                db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?,?)', (server.uid(), workspace_a, project_a, 'Cross assignee', '', 'todo', 'low', user_b, '', 1.0))
 
     def test_logout_revokes_session(self):
         cookie, state = self.register()
