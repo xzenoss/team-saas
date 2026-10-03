@@ -44,7 +44,7 @@ async function trapDialog(page){
 
 async function assertReducedMotion(page,selectors){
  await page.emulateMedia({reducedMotion:'reduce'});
- await page.waitForFunction(()=>matchMedia('(prefers-reduced-motion: reduce)').matches);
+ await page.waitForFunction(selectors=>matchMedia('(prefers-reduced-motion: reduce)').matches&&[...document.querySelectorAll(selectors)].every(e=>{const s=getComputedStyle(e);return [...s.transitionDuration.split(','),...s.animationDuration.split(',')].every(value=>parseFloat(value)===0);}),selectors);
  const moving=await page.locator(selectors).evaluateAll(elements=>elements.filter(e=>{const s=getComputedStyle(e);return [...s.transitionDuration.split(','),...s.animationDuration.split(',')].some(value=>parseFloat(value)>0);}).map(e=>({tag:e.tagName,cls:e.className})));
  assert.deepEqual(moving,[],'reduced-motion removes tested CSS transitions and animations');
 }
