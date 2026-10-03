@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile Python
-        run: python -m py_compile server.py
+        run: python -m py_compile server.py scripts/database_recovery.py
       - name: Import and configuration smoke check
         run: |
           python - <<'PY'
@@ -26,3 +26,6 @@ jobs:
           PY
       - name: API security regression checks
         run: python -m unittest discover -s tests/security -p 'test_*.py' -v
+
+      - name: Database recovery regression checks
+        run: python -m unittest discover -s tests/recovery -p 'test_*.py' -v
