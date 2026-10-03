@@ -7,3 +7,5 @@ The suite also doubles the computed text sizes in selected rendered screens, tes
 ## Browser matrix
 
 CI runs the same suite independently on Chromium, Firefox and WebKit (`fail-fast: false`). Each engine preserves its own report artifact and the JSON includes the engine/version. Locally install with `npx playwright install --with-deps chromium firefox webkit`; run `UI_BROWSER=firefox npm test` or `UI_BROWSER=webkit npm test`. Without UI_BROWSER, Chromium remains the default. UI_CHROMIUM_EXECUTABLE applies only to Chromium. WebKit on Linux is engine coverage, not a claim of testing Safari on Apple devices.
+
+Additional scenarios exercise closed mobile sidebar focus, breakpoint focus recovery and prefers-reduced-motion. Order scroll behavior is observed during a synthetic accepted status mutation. Perkora controls are checked under the same motion preference.

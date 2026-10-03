@@ -23,3 +23,7 @@ Selected screens are now checked with text resized to 200%, a 320 CSS-pixel refl
 ## Browser compatibility baseline
 
 The persistent UI suite runs independently on Chromium, Firefox and WebKit in CI, with engine-specific artifacts and engine/version in the report. Fixtures assert application behavior rather than a browser-specific wording for network failures. This expands engine coverage without establishing Safari/iOS device coverage, screen-reader usability or complete WCAG conformance.
+
+## Mobile focus and motion baseline
+
+The suite additionally exercises closed mobile navigation, desktop/mobile breakpoint focus recovery, and reduced-motion preferences across the three browser engines. Gather makes its closed mobile sidebar inert; controls re-enter the focus/accessibility tree when opened or when desktop navigation is shown. Focus entering content closes the mobile overlay, while dialogs preserve their native modality. The orders page respects reduced-motion preferences for both opening and saving details. These are selected regression assertions, not a complete keyboard or assistive-technology audit.
