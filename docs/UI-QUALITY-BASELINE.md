@@ -15,3 +15,7 @@ Sources checked 2026-10-03: https://www.w3.org/TR/WCAG22/ ; https://owasp.org/pr
 ## Persistent regression coverage
 
 `tests/ui` now contains pinned Chromium/axe regression checks with synthetic API responses, run by `.github/workflows/ui-quality.yml` on pull requests and pushes. The suite checks selected WCAG rules and 320px page reflow plus project-specific error/recovery and keyboard behavior. Install and run instructions are in `tests/ui/README.md`. CI preserves its JSON evidence as an artifact. These checks do not certify WCAG conformance, ISO certification, authorization, provider delivery, or production infrastructure readiness.
+
+## Reading and keyboard regression coverage
+
+Selected screens are now checked with text resized to 200%, a 320 CSS-pixel reflow viewport, and user spacing overrides (line-height 1.5, paragraph spacing 2em, letter spacing .12em, word spacing .16em). Button clipping and unscrollable navigation are checked in addition to page overflow. Modal keyboard cycling, Escape, focus return and skip-link targets have assertions. Populated Arabic order and mixed-script customer fixtures cover bidi isolation and keyboard flow. These fixtures do not establish browser zoom, full localization, screen-reader usability or complete WCAG conformance.

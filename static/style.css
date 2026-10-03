@@ -46,3 +46,12 @@ button.icon-button,.task-toggle,.view-switch button{min-width:44px;min-height:44
 .workspace-main,#main,.overview-bottom,.overview-bottom>section,.table-wrap{min-width:0;max-width:100%}
 @media(max-width:650px){.overview-bottom{display:block}.overview-bottom>section{margin-block-end:18px}.task-table{min-width:470px}.table-wrap{width:100%;overflow:auto}}
 .table-wrap{position:relative}
+
+/* Enlarged text must wrap rather than clip navigation controls. */
+.workspace-switch{height:auto;min-height:44px;align-items:flex-start}
+.workspace-switch>span{min-width:0}.workspace-switch strong,.workspace-switch small{white-space:normal;overflow-wrap:anywhere}
+.team-tip .button{white-space:normal;flex-wrap:wrap;height:auto;overflow-wrap:anywhere}
+.sidebar{overflow-y:auto}.sidebar>*{flex-shrink:0}
+
+.sidebar>.brand{display:block;overflow-wrap:anywhere;white-space:normal}.sidebar>.brand .logo-mark{display:inline-grid;vertical-align:middle}
+.workspace-switch{flex-wrap:wrap}.workspace-switch>span:nth-child(2){flex:1 1 6em}.workspace-switch>.icon{margin-inline-start:auto}
