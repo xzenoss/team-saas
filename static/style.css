@@ -12,3 +12,37 @@ label{display:block;font-size:11px;font-weight:550;color:#80758e}input,textarea,
 @media(max-width:650px){.sidebar{transform:translateX(-100%);transition:transform .2s;width:230px;box-shadow:12px 0 40px #47365e22;padding:24px 18px 0}.sidebar.mobile-open{transform:translateX(0)}.workspace-main{margin-left:0;width:100%}.mobile-toggle{display:flex}.topbar{height:62px;padding:0 16px;position:sticky;top:0;z-index:15;backdrop-filter:blur(10px)}.breadcrumb{gap:9px;font-size:10px}.breadcrumb>span:first-of-type,.breadcrumb>.slash{display:none}.topbar-right{gap:10px}.topbar-divider{display:none}.search-box{max-width:120px}.search-box input{width:90px;font-size:10px;margin:0}.topbar .avatar{width:28px;height:28px;font-size:9px}#main{padding:25px 17px 12px}.page-heading{gap:12px;align-items:flex-start;margin-bottom:22px}.page-heading h1{font-size:22px;letter-spacing:-.6px}.page-heading .eyebrow{font-size:7px;letter-spacing:1.1px}.page-heading>.button{font-size:0;padding:9px;min-height:36px}.page-heading>.button .icon{width:17px;height:17px}.page-heading p{font-size:10px;max-width:260px}.wave{font-size:18px;margin-left:3px}.welcome-banner{min-height:208px;padding:22px 20px;margin-bottom:17px}.banner-eyebrow{font-size:7px;letter-spacing:.7px}.welcome-banner h2{font-size:25px}.welcome-banner p{font-size:9px;max-width:180px}.banner-art{position:absolute;right:9px;top:33px;width:150px;height:150px;transform:scale(.55);transform-origin:right center;opacity:.85}.welcome-banner>div:first-child{position:relative;z-index:1}.banner-link{font-size:9px;margin-top:20px}.stats-grid{gap:10px;margin-bottom:25px}.stat-card{padding:15px 12px}.stat-label{font-size:10px}.stat-card strong{font-size:26px}.stat-card small{font-size:8px}.stat-icon{width:29px;height:29px}.section-heading h2{font-size:15px}.section-heading p{font-size:9px}.section-heading .text-button{font-size:9px;gap:4px}.projects-grid{gap:11px}.project-card{padding:13px}.project-card h3{font-size:11px}.project-card>p{font-size:9px;min-height:31px}.project-icon{height:31px;width:31px}.project-card-top{margin-bottom:11px}.project-card-bottom{margin-top:12px;gap:3px}.project-card-bottom>span:last-child{font-size:8px}.avatar-stack .tiny-avatar{height:23px;width:23px;font-size:8px}.avatar-stack>.muted{font-size:7px}.progress-label{font-size:8px}.projects-page{grid-template-columns:1fr}.projects-page .project-card{padding:20px}.overview-bottom{margin-top:23px;gap:17px}.panel-heading{padding:17px 14px 13px}.panel-heading h2{font-size:13px}.panel-heading p{font-size:9px}.task-table{min-width:470px}.task-table th:first-child,.task-table td:first-child{padding-left:13px;width:27px}.task-table td:last-child{padding-right:12px}.activity-list{grid-template-columns:1fr;padding:0 14px}.activity-item{padding:11px 0}.activity-item p{font-size:11px}.app-footer{padding:15px 18px 22px;font-size:8px;justify-content:center}.app-footer>span:last-child{display:none}.filters{gap:7px}.filters select{font-size:10px;max-width:150px;padding-right:10px}.task-count{display:none}.board-toolbar{gap:8px;margin-bottom:18px}.view-switch .icon{width:13px;height:13px}.kanban-cards{grid-template-columns:1fr}.kanban-card{padding:16px}.kanban-card h3{font-size:13px}.kanban-card>p{font-size:11px}.member-grid{grid-template-columns:1fr}.settings-panel{padding:20px}.auth-layout{grid-template-columns:1fr}.auth-story{min-height:auto;padding:24px}.auth-story>.brand{font-size:26px}.story-content{padding:36px 0 15px}.story-content>.eyebrow{font-size:8px}.story-content h1{font-size:39px;margin:12px 0;letter-spacing:-1.8px}.story-content h1 br:nth-child(2){display:none}.story-content>p{max-width:280px;font-size:12px}.story-card,.story-footer{display:none}.auth-form-wrap{padding:35px 25px 45px}.auth-form{max-width:380px}.auth-form h2{font-size:27px}.auth-form>.muted{font-size:11px}.auth-form>.pill{font-size:7px}.modal-heading h2{font-size:18px}dialog{padding:20px}.modal-actions{gap:7px}.modal-actions .button{font-size:11px;padding:10px}.form-grid{gap:0 12px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 
+
+
+/* Portfolio accessibility baseline — 2026-10-03. Tested changes, not a conformance claim. */
+:root{--brand-ink:#17191D;--brand-accent:#FF8A3D;--focus-color:#9A3F00}
+html{scroll-padding-top:1rem}body{font-size:16px;line-height:1.6}
+a,button,input,select,textarea{touch-action:manipulation}
+button,input,select{min-height:44px}button{cursor:pointer}textarea{min-height:100px}
+:focus-visible{outline:3px solid var(--focus-color)!important;outline-offset:3px!important}
+.skip-link{position:fixed;inset-block-start:8px;inset-inline-start:8px;z-index:1000;transform:translateY(-200%);background:#17191D;color:#fff;padding:12px 18px;border-radius:6px}
+.skip-link:focus{transform:none}
+main:focus{outline:none}main{min-width:0}table{font-size:14px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+@media(forced-colors:active){button,input,select,textarea,.panel{border:1px solid CanvasText}:focus-visible{outline-color:Highlight!important}}
+
+/* Preserve Gather identity until naming clearance; improve reading and focus. */
+.muted,.stat-label,.stat-card small,.project-card p,.auth-note,.nav-label,.app-footer{color:#545568}
+button.icon-button,.task-toggle,.view-switch button{min-width:44px;min-height:44px}
+.task-table td,.task-table th{font-size:14px}
+@media(max-width:650px){.topbar{flex-wrap:wrap;height:auto;gap:12px;padding:16px}.topbar-right{width:100%;min-width:0}.search-box{width:100%}.page-heading{flex-wrap:wrap}.table-wrap{overflow:auto}.kanban{overflow-x:auto}}
+/* Measured contrast corrections for dashboard/navigation text. */
+.workspace-switch small,.sidebar-empty,.user-panel small,.breadcrumb span,.page-heading p,.stat-unit,.section-heading p,.panel-heading p,.empty-state p,.activity-footer,.text-button.subtle{color:#51515F;font-size:14px}
+.nav-item{color:#51515F;font-size:14px}.nav-item.active{color:#50358B}.avatar{color:#4F365E}
+.banner-eyebrow,.welcome-banner p,.banner-link,.note-front>div>span{color:#51405F;font-size:14px}
+@media(max-width:650px){.page-heading>.button{font-size:14px;min-height:44px}.nav-label,.eyebrow{font-size:12px}}
+.floating-note.note-front>div>span{color:#17191D;font-size:14px}
+.project-nav,.progress-label,.progress-label strong,.task-project,.due,.task-table th,form label{color:#51515F;font-size:14px}
+.project-card-bottom>span:last-child{color:#51515F;font-size:14px;white-space:normal}
+.status.todo{color:#51475F}.status.progress{color:#735020}.status.done{color:#315E44}
+.priority.high,.due.overdue{color:#8F3737}.priority.medium{color:#735020}.priority.low{color:#3B5578}
+.status,.priority,.due{font-size:14px}
+.floating-note.note-front>div>span{color:#17191D!important;font-size:14px!important}
+.workspace-main,#main,.overview-bottom,.overview-bottom>section,.table-wrap{min-width:0;max-width:100%}
+@media(max-width:650px){.overview-bottom{display:block}.overview-bottom>section{margin-block-end:18px}.task-table{min-width:470px}.table-wrap{width:100%;overflow:auto}}
+.table-wrap{position:relative}
