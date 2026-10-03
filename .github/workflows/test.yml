@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   syntax:
     runs-on: ubuntu-latest
@@ -13,10 +16,16 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile Python
-        run: python -m py_compile server.py
-      - name: Health endpoint smoke test
-        run: python - <<'PY'
-import server
-assert server.MAX_REQUEST_BYTES == 32768
-print("server import OK")
-PY
+        run: python -m py_compile server.py scripts/database_recovery.py
+      - name: Import and configuration smoke check
+        run: |
+          python - <<'PY'
+          import server
+          assert server.MAX_REQUEST_BYTES == 32768
+          print("server import OK")
+          PY
+      - name: API security regression checks
+        run: python -m unittest discover -s tests/security -p 'test_*.py' -v
+
+      - name: Database recovery regression checks
+        run: python -m unittest discover -s tests/recovery -p 'test_*.py' -v
