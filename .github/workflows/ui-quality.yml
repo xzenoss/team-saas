@@ -6,9 +6,13 @@ on:
 permissions:
   contents: read
 jobs:
-  chromium-regression:
+  browser-regression:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,16 +21,18 @@ jobs:
       - name: Install UI test dependencies
         working-directory: tests/ui
         run: npm ci
-      - name: Install Chromium
+      - name: Install selected browser
         working-directory: tests/ui
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps ${{ matrix.browser }}
       - name: Run UI regression checks
         working-directory: tests/ui
+        env:
+          UI_BROWSER: ${{ matrix.browser }}
         run: npm test
       - name: Preserve test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ui-quality-results
+          name: ui-quality-${{ matrix.browser }}-results
           path: tests/ui/results/
           if-no-files-found: ignore

@@ -19,3 +19,7 @@ Sources checked 2026-10-03: https://www.w3.org/TR/WCAG22/ ; https://owasp.org/pr
 ## Reading and keyboard regression coverage
 
 Selected screens are now checked with text resized to 200%, a 320 CSS-pixel reflow viewport, and user spacing overrides (line-height 1.5, paragraph spacing 2em, letter spacing .12em, word spacing .16em). Button clipping and unscrollable navigation are checked in addition to page overflow. Modal keyboard cycling, Escape, focus return and skip-link targets have assertions. Populated Arabic order and mixed-script customer fixtures cover bidi isolation and keyboard flow. These fixtures do not establish browser zoom, full localization, screen-reader usability or complete WCAG conformance.
+
+## Browser compatibility baseline
+
+The persistent UI suite runs independently on Chromium, Firefox and WebKit in CI, with engine-specific artifacts and engine/version in the report. Fixtures assert application behavior rather than a browser-specific wording for network failures. This expands engine coverage without establishing Safari/iOS device coverage, screen-reader usability or complete WCAG conformance.
