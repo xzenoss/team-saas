@@ -11,3 +11,7 @@ Release evidence: tenant cross-access tests, MFA and revocation, input/secret co
 Every control record needs owner, scope, proposed/implemented/tested/independently-assessed state, evidence URL, test date and exception. Organization certification requires a scoped management system and independent assessment; CSS does not certify a company.
 
 Sources checked 2026-10-03: https://www.w3.org/TR/WCAG22/ ; https://owasp.org/projects/asvs ; https://www.iso.org/standard/27001 ; https://www.iso.org/standard/88464.html ; https://www.iso.org/standard/75106.html ; https://www.iso.org/standard/77520.html ; https://www.iso.org/standard/42001 .
+
+## Persistent regression coverage
+
+`tests/ui` now contains pinned Chromium/axe regression checks with synthetic API responses, run by `.github/workflows/ui-quality.yml` on pull requests and pushes. The suite checks selected WCAG rules and 320px page reflow plus project-specific error/recovery and keyboard behavior. Install and run instructions are in `tests/ui/README.md`. CI preserves its JSON evidence as an artifact. These checks do not certify WCAG conformance, ISO certification, authorization, provider delivery, or production infrastructure readiness.
