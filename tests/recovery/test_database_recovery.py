@@ -149,6 +149,50 @@ class DatabaseRecoveryTests(unittest.TestCase):
         self.assertFalse(missing.exists())
         self.assertFalse(self.backup.exists())
 
+    def assert_semantic_damage_rejected(self, statement, message):
+        self.db.execute(statement)
+        self.db.commit()
+        before = self.rows(self.source)
+        self.assertEqual(self.db.execute('PRAGMA integrity_check').fetchall()[0][0], 'ok')
+        self.assertEqual(self.db.execute('PRAGMA foreign_key_check').fetchall(), [])
+        for restore in (False, True):
+            with self.subTest(restore=restore):
+                target = self.restored if restore else self.backup
+                with self.assertRaisesRegex(ValueError, message):
+                    snapshot(self.source, target, restore=restore)
+                self.assertFalse(target.exists())
+                self.assertEqual(list(self.root.glob('.gather-recovery-*')), [])
+                self.assertEqual(before, self.rows(self.source))
+
+    def test_cross_workspace_project_is_rejected(self):
+        self.assert_semantic_damage_rejected(
+            "UPDATE tasks SET project_id='b' WHERE id='a'", 'project is outside')
+
+    def test_foreign_workspace_assignee_is_rejected(self):
+        self.assert_semantic_damage_rejected(
+            "UPDATE tasks SET assignee_id='b' WHERE id='a'", 'assignee is not a member')
+
+    def test_removed_member_assignee_is_rejected(self):
+        self.assert_semantic_damage_rejected(
+            "DELETE FROM members WHERE workspace_id='a' AND user_id='a'", 'assignee is not a member')
+
+    def test_unknown_member_role_is_rejected(self):
+        self.assert_semantic_damage_rejected(
+            "UPDATE members SET role='administrator' WHERE workspace_id='a'", 'Unsupported workspace member role')
+
+    def test_unassigned_and_shared_member_tasks_are_allowed(self):
+        self.db.execute("UPDATE tasks SET assignee_id=NULL WHERE id='a'")
+        self.db.execute("INSERT INTO members VALUES('b','a','member')")
+        self.db.execute("UPDATE tasks SET assignee_id='a' WHERE id='b'")
+        self.db.commit()
+        before = self.rows(self.source)
+        snapshot(self.source, self.backup)
+        self.assertEqual(before, self.rows(self.backup))
+        snapshot(self.backup, self.restored, restore=True)
+        for table in TABLES - {'sessions', 'invites'}:
+            self.assertEqual(before[table], self.rows(self.restored)[table])
+        self.assertEqual(self.rows(self.restored, {'sessions', 'invites'}), {'sessions': [], 'invites': []})
+
     def test_failed_backup_deadline_leaves_no_destination(self):
         with self.assertRaises(TimeoutError):
             snapshot(self.source, self.backup, timeout=-1)

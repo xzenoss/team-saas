@@ -31,6 +31,22 @@ def validate(db):
             raise ValueError('Not a compatible Gather database')
     if db.execute('PRAGMA foreign_key_check').fetchone() is not None:
         raise ValueError('Database foreign key check failed')
+    # Individual foreign keys cannot enforce Gather's workspace boundaries.
+    checks = (
+        ('''SELECT 1 FROM tasks t WHERE NOT EXISTS
+            (SELECT 1 FROM projects p WHERE p.id=t.project_id
+             AND p.workspace_id=t.workspace_id) LIMIT 1''',
+         'Task project is outside its workspace'),
+        ('''SELECT 1 FROM tasks t WHERE t.assignee_id IS NOT NULL AND NOT EXISTS
+            (SELECT 1 FROM members m WHERE m.user_id=t.assignee_id
+             AND m.workspace_id=t.workspace_id) LIMIT 1''',
+         'Task assignee is not a member of its workspace'),
+        ("SELECT 1 FROM members WHERE role IS NULL OR role NOT IN ('owner','member') LIMIT 1",
+         'Unsupported workspace member role'),
+    )
+    for query, message in checks:
+        if db.execute(query).fetchone() is not None:
+            raise ValueError(message)
 
 
 def snapshot(source, destination, *, restore=False, timeout=30):
