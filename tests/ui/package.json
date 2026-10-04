@@ -1,0 +1,12 @@
+{
+  "name": "team-saas-ui-quality",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test": "node run.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1",
+    "axe-core": "4.13.0"
+  }
+}

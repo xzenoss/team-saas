@@ -1,0 +1,38 @@
+name: UI quality
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install UI test dependencies
+        working-directory: tests/ui
+        run: npm ci
+      - name: Install selected browser
+        working-directory: tests/ui
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Run UI regression checks
+        working-directory: tests/ui
+        env:
+          UI_BROWSER: ${{ matrix.browser }}
+        run: npm test
+      - name: Preserve test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-quality-${{ matrix.browser }}-results
+          path: tests/ui/results/
+          if-no-files-found: ignore
