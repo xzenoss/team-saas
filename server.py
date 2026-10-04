@@ -318,9 +318,13 @@ class Handler(BaseHTTPRequestHandler):
             invite = db.execute('SELECT * FROM invites WHERE token=? AND expires>?', (digest(token), time.time())).fetchone()
             if not invite:
                 raise ApiError('This invitation has expired or has already been used.', 404)
+            # Claim while holding SQLite's write transaction, before granting access.
+            # A concurrent reader may have seen the same invite; only one delete succeeds.
+            claimed = db.execute('DELETE FROM invites WHERE token=? AND expires>?', (digest(token), time.time()))
+            if claimed.rowcount != 1:
+                raise ApiError('This invitation has expired or has already been used.', 404)
             db.execute('INSERT OR IGNORE INTO members VALUES(?,?,?)', (invite['workspace_id'], s['user_id'], 'member'))
             db.execute('UPDATE sessions SET workspace_id=? WHERE token=?', (invite['workspace_id'], s['token']))
-            db.execute('DELETE FROM invites WHERE token=?', (digest(token),))
             self.log_activity(db, {'workspace_id': invite['workspace_id'], 'name': s['name']}, 'joined the workspace')
         elif path == '/api/settings':
             if s['role'] != 'owner':
