@@ -8,10 +8,12 @@ services:
     container_name: team-saas-uat-app
     environment:
       TEAMSAAS_DB: /data/team.db
-      TEAMSAAS_SECURE_COOKIE: "0"
+      TEAMSAAS_SECURE_COOKIE: "0" # LOCALHOST-only UAT; NEVER set 0 in internet-facing deployments
+      TEAMSAAS_ENABLE_DEMO: "0"
+      TEAMSAAS_ALLOW_HTTP_WEBHOOK_FOR_UAT: "0"
       TEAMSAAS_N8N_WEBHOOK_URL: ""
     ports:
-      - "8001:8000"
+      - "127.0.0.1:8001:8000"
     volumes:
       - team_saas_uat_data:/data
     restart: unless-stopped
@@ -21,11 +23,9 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    depends_on:
-      n8n:
-        condition: service_started
 
   n8n:
+    profiles: ["automation"] # optional, DO NOT start with default UAT
     image: n8nio/n8n:v3-nightly-20260920-pc
     container_name: team-saas-uat-n8n
     environment:
@@ -39,7 +39,7 @@ services:
       GENERIC_TIMEZONE: Africa/Cairo
       TZ: Africa/Cairo
     ports:
-      - "3984:5678"
+      - "127.0.0.1:3984:5678"
     volumes:
       - team_saas_uat_n8n:/home/node/.n8n
     restart: unless-stopped
