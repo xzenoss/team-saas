@@ -20,3 +20,6 @@ import server
 assert server.MAX_REQUEST_BYTES == 32768
 print("server import OK")
 PY
+
+      - name: Run tenant isolation and demo/webhook authorization tests
+        run: python -m unittest discover -s tests -v
