@@ -206,6 +206,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def handle_post(self, db, path, data):
         if path in ('/api/register', '/api/demo', '/api/login'):
+            if path == '/api/demo' and os.environ.get('TEAMSAAS_ENABLE_DEMO', '0') != '1':
+                raise ApiError('Demo account creation is disabled.', 403)
             if rate_limited('auth:' + (self.client_address[0] if self.client_address else 'unknown')):
                 raise ApiError('Too many sign-in attempts. Try again in a few minutes.', 429)
             if path == '/api/login':
@@ -244,13 +246,26 @@ class Handler(BaseHTTPRequestHandler):
             raise ApiError('Session validation failed. Refresh and try again.', 403)
         wid = s['workspace_id']
         if path == '/api/n8n/webhook':
+            if s['role'] != 'owner':
+                raise ApiError('Only workspace owners may call automation webhooks.', 403)
             webhook = os.environ.get('TEAMSAAS_N8N_WEBHOOK_URL', '').strip()
-            if not webhook.startswith(('http://', 'https://')):
-                raise ApiError('n8n webhook is not configured.', 503)
+            parsed = urlparse(webhook)
+            if parsed.scheme != 'https' and not (parsed.scheme == 'http' and
+                    os.environ.get('TEAMSAAS_ALLOW_HTTP_WEBHOOK_FOR_UAT') == '1' and
+                    parsed.hostname in ('127.0.0.1', 'localhost', 'n8n')):
+                raise ApiError('n8n webhook must use HTTPS or explicit local UAT exception.', 503)
+            if not parsed.hostname or parsed.username or parsed.password or parsed.fragment:
+                raise ApiError('Invalid n8n webhook configuration.', 503)
             try:
                 payload = json.dumps({'event': 'workspace.test', 'workspace_id': wid, 'actor': s['name'], 'data': data}).encode()
                 request = Request(webhook, data=payload, headers={'Content-Type': 'application/json'}, method='POST')
-                with urlopen(request, timeout=10) as response:
+                # Disable redirects: an allowed endpoint must not silently forward
+                # customer-controlled content to a different host.
+                from urllib.request import build_opener, HTTPRedirectHandler
+                class RejectRedirect(HTTPRedirectHandler):
+                    def redirect_request(self, req, fp, code, msg, headers, newurl):
+                        return None
+                with build_opener(RejectRedirect).open(request, timeout=10) as response:
                     if response.status >= 400:
                         raise ApiError('n8n webhook rejected the event.', 502)
             except ApiError:
