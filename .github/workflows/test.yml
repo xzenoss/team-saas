@@ -1,11 +1,13 @@
-name: Test
-
+name: Gather security and functional CI
 on:
   push:
+    branches: [main]
   pull_request:
-
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
-  syntax:
+  python-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,9 +16,12 @@ jobs:
           python-version: "3.12"
       - name: Compile Python
         run: python -m py_compile server.py
-      - name: Health endpoint smoke test
-        run: python - <<'PY'
-import server
-assert server.MAX_REQUEST_BYTES == 32768
-print("server import OK")
-PY
+      - name: Health endpoint import smoke test
+        run: |
+          python - <<'PY'
+          import server
+          assert server.MAX_REQUEST_BYTES == 32768
+          print("server import OK")
+          PY
+      - name: Verify tenant isolation, CSRF, origin and demo gates
+        run: python -m unittest discover -s tests -v
