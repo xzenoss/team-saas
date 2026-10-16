@@ -21,3 +21,12 @@ Stop the lab with:
 docker compose -f docker-compose.uat.yml down
 ```
 
+
+
+## Security review updates — 16 October 2026
+
+- App (8001) and n8n (3984) now bind **127.0.0.1** only. This is a local-development posture, not public UAT hosting.
+- Demo account creation is **disabled by default** (`TEAMSAAS_ENABLE_DEMO=0`). To temporarily enable local demo, set it to `1`, restart only the local app, then disable it again.
+- n8n is **opt-in** via `docker compose --profile automation -f docker-compose.uat.yml up -d --build`. The existing container image is a nightly candidate, **not validated for production**, and must be reviewed/pinned to an approved release before any internet exposure.
+- Automation webhook requires workspace-owner role, HTTPS by default, and rejects cross-host HTTP redirect chains. Local HTTP is available only with explicit UAT exception to trusted hostnames.
+- For deployment beyond the local machine, enforce TLS, Secure cookies, external authentication/MFA, a trusted reverse proxy, hardened deployment image, per-workspace quotas, tested backups, and security assessments. Never change the localhost binding to 0.0.0.0 without network security review.
