@@ -70,6 +70,7 @@ class CredentialBoundSessionTests(unittest.TestCase):
         with self.pg.connect(self.admin_dsn) as db:
             db.execute('DELETE FROM sessions')
             db.execute('UPDATE members SET revoked_at=NULL')
+            db.execute("UPDATE users SET password=%s WHERE id IN ('u-a','u-b')", (server.hash_password(self.password),))
 
     def login(self, **kwargs):
         options = {
