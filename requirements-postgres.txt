@@ -1,0 +1,3 @@
+# Opt-in PostgreSQL auth throttle; CI resolves a compatible release.
+# Production image builds must pin exact reviewed versions and retain an SBOM.
+psycopg[binary]>=3.2,<3.4
