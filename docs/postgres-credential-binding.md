@@ -37,3 +37,7 @@ CI uses PostgreSQL 16 plus distinct throttle, credential-read/issue, and session
 ## P0 incomplete
 
 The **original HTTP server still uses SQLite**. This new function is not connected to its login, role-mapping or CSRF lifecycle. No user data migration, multi-instance application serving, production secrets/TLS, RPO/RTO or regulatory assessment was performed. Do not deploy publicly or treat CI success as production approval. Review the account provisioning, IdP decision, data migration and proxy trust model first.
+
+## Legacy HTTP production startup guard
+
+The existing `server.py` still reads and writes SQLite for all core business features. It now rejects SQLite initialization and connections when `TEAMSAAS_ENVIRONMENT=production` (or `prod`), with regression tests proving the database is not created. This is a deliberate **fail-closed deployment boundary**, not a PostgreSQL cutover or full environment validation. An internet-exposed deployment mislabeled as UAT would still be unsafe. Production requires replacing the legacy persistence and HTTP authentication paths, not bypassing this guard.
