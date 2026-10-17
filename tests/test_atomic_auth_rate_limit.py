@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -24,7 +25,8 @@ class AtomicAuthRateLimitTests(unittest.TestCase):
 
     def test_capacity_is_persistent_and_does_not_store_raw_client_key(self):
         key = 'auth:192.0.2.99'
-        with patch.object(server.time, 'time', return_value=1000):
+        now = time.time()
+        with patch.object(server.time, 'time', return_value=now):
             for _ in range(server.RATE_LIMIT):
                 self.assertFalse(server.rate_limited(key))
             self.assertTrue(server.rate_limited(key))
@@ -42,9 +44,8 @@ class AtomicAuthRateLimitTests(unittest.TestCase):
              "import server; print('limited' if server.rate_limited('auth:192.0.2.99') else 'allowed')"],
             env=env, capture_output=True, text=True, timeout=15
         )
-        # This process runs at real time; the fixed-window test data above is
-        # historical, so verify persistence with a separate real-time key below.
         self.assertEqual(probe.returncode, 0, probe.stderr)
+        self.assertEqual(probe.stdout.strip(), 'limited')
 
     def test_window_expiry_and_key_isolation(self):
         with patch.object(server.time, 'time', return_value=1000):
