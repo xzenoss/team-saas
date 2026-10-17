@@ -60,3 +60,12 @@ jobs:
           TEAMSAAS_SESSION_TEST_DSN: postgresql://gather_session_ci:disposable-session-test-only@localhost:5432/gather_contract
           TEAMSAAS_SESSION_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/gather_contract
         run: python -m unittest discover -s tests -p 'test_postgres_session_store.py' -v
+      - name: Create restricted credential identity role
+        run: psql -v ON_ERROR_STOP=1 -f tests/postgres_identity_role.sql
+      - name: Test credential-to-session binding and tenant denial
+        env:
+          TEAMSAAS_IDENTITY_TEST_DSN: postgresql://gather_identity_ci:disposable-identity-test-only@localhost:5432/gather_contract
+          TEAMSAAS_AUTH_RATE_TEST_DSN: postgresql://gather_throttle_ci:only-for-disposable-ci-tests@localhost:5432/gather_contract
+          TEAMSAAS_SESSION_TEST_DSN: postgresql://gather_session_ci:disposable-session-test-only@localhost:5432/gather_contract
+          TEAMSAAS_SESSION_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/gather_contract
+        run: python -m unittest discover -s tests -p 'test_postgres_authenticated_session.py' -v
