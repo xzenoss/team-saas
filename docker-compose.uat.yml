@@ -18,7 +18,7 @@ services:
       - team_saas_uat_data:/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)\""]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=3)\""]
       interval: 15s
       timeout: 5s
       retries: 5
