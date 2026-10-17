@@ -1,0 +1,42 @@
+name: Gather PostgreSQL schema contract
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-schema:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gather_contract
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gather_contract"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      PGPASSWORD: postgres
+      PGHOST: localhost
+      PGUSER: postgres
+      PGDATABASE: gather_contract
+      PGPORT: "5432"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+      - name: Apply schema to disposable PostgreSQL
+        run: psql -v ON_ERROR_STOP=1 -f db/postgres/001_foundation.sql
+      - name: Test FK constraints and restricted-role RLS
+        run: psql -v ON_ERROR_STOP=1 -f tests/postgres_schema_contract.sql
