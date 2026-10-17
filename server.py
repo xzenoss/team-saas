@@ -8,8 +8,6 @@ import re
 import secrets
 import sqlite3
 import time
-from collections import defaultdict, deque
-from threading import Lock
 from urllib.request import Request, urlopen
 from datetime import date, timedelta
 from http.cookies import SimpleCookie
@@ -22,8 +20,6 @@ SESSION_AGE = 7 * 86400
 MAX_REQUEST_BYTES = 32768
 RATE_WINDOW = 300
 RATE_LIMIT = 12
-_rate_lock = Lock()
-_rate_hits = defaultdict(deque)
 
 
 def connect():
@@ -46,6 +42,8 @@ def initialize():
         CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY, workspace_id TEXT REFERENCES workspaces(id), project_id TEXT REFERENCES projects(id) ON DELETE CASCADE, title TEXT NOT NULL, description TEXT NOT NULL, status TEXT NOT NULL, priority TEXT NOT NULL, assignee_id TEXT REFERENCES users(id), due TEXT NOT NULL, created REAL NOT NULL);
         CREATE TABLE IF NOT EXISTS invites(token TEXT PRIMARY KEY, workspace_id TEXT REFERENCES workspaces(id), expires REAL NOT NULL, created_by TEXT REFERENCES users(id));
         CREATE TABLE IF NOT EXISTS activity(id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id TEXT REFERENCES workspaces(id), actor TEXT NOT NULL, message TEXT NOT NULL, created REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS auth_rate_hits(id INTEGER PRIMARY KEY AUTOINCREMENT, key_hash TEXT NOT NULL, attempted_at REAL NOT NULL);
+        CREATE INDEX IF NOT EXISTS idx_auth_rate_hits_key_time ON auth_rate_hits(key_hash, attempted_at);
         ''')
 
 
@@ -69,15 +67,27 @@ class ApiError(Exception):
 
 
 def rate_limited(key):
+    """Use one atomic SQLite transaction for all processes sharing this DB file.
+
+    This remains a single-host UAT mechanism, NOT a distributed production
+    limiter. Production must move to shared PostgreSQL/Redis state.
+    """
     now = time.time()
-    with _rate_lock:
-        hits = _rate_hits[key]
-        while hits and hits[0] <= now - RATE_WINDOW:
-            hits.popleft()
-        if len(hits) >= RATE_LIMIT:
-            return True
-        hits.append(now)
-        return False
+    key_hash = hashlib.sha256(key.encode('utf-8')).hexdigest()
+    try:
+        with connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute('DELETE FROM auth_rate_hits WHERE attempted_at <= ?', (now - RATE_WINDOW,))
+            count = db.execute(
+                'SELECT COUNT(*) FROM auth_rate_hits WHERE key_hash=? AND attempted_at>?',
+                (key_hash, now - RATE_WINDOW)
+            ).fetchone()[0]
+            if count >= RATE_LIMIT:
+                return True
+            db.execute('INSERT INTO auth_rate_hits(key_hash, attempted_at) VALUES (?,?)', (key_hash, now))
+            return False
+    except sqlite3.Error as exc:
+        raise ApiError('Sign-in protection is temporarily unavailable.', 503) from exc
 
 
 def field(data, key, maximum=160, required=True):
