@@ -51,3 +51,12 @@ jobs:
         env:
           TEAMSAAS_AUTH_RATE_TEST_DSN: postgresql://gather_throttle_ci:only-for-disposable-ci-tests@localhost:5432/gather_contract
         run: python -m unittest discover -s tests -p 'test_postgres_auth_throttle.py' -v
+      - name: Apply PostgreSQL session lifecycle migration
+        run: psql -v ON_ERROR_STOP=1 -f db/postgres/002_session_lifecycle.sql
+      - name: Create restricted session role
+        run: psql -v ON_ERROR_STOP=1 -f tests/postgres_session_role.sql
+      - name: Test PostgreSQL session issuance, expiry and cross-process revocation
+        env:
+          TEAMSAAS_SESSION_TEST_DSN: postgresql://gather_session_ci:disposable-session-test-only@localhost:5432/gather_contract
+          TEAMSAAS_SESSION_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/gather_contract
+        run: python -m unittest discover -s tests -p 'test_postgres_session_store.py' -v
