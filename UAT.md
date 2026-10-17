@@ -30,3 +30,12 @@ docker compose -f docker-compose.uat.yml down
 - n8n is **opt-in** via `docker compose --profile automation -f docker-compose.uat.yml up -d --build`. The existing container image is a nightly candidate, **not validated for production**, and must be reviewed/pinned to an approved release before any internet exposure.
 - Automation webhook requires workspace-owner role, HTTPS by default, and rejects cross-host HTTP redirect chains. Local HTTP is available only with explicit UAT exception to trusted hostnames.
 - For deployment beyond the local machine, enforce TLS, Secure cookies, external authentication/MFA, a trusted reverse proxy, hardened deployment image, per-workspace quotas, tested backups, and security assessments. Never change the localhost binding to 0.0.0.0 without network security review.
+
+
+## Local-UAT authentication rate limiter (single host)
+
+Authentication attempts are now recorded in SQLite `auth_rate_hits`, not in process-local Python memory. `BEGIN IMMEDIATE` serializes the rolling-window count and insert, so separate workers/processes referencing the **same local SQLite file** cannot admit more attempts than the configured limit during concurrent requests. Only a SHA-256 digest of the rate-limit key is stored, but these hashes are **pseudonymous, not anonymous**.
+
+A database failure rejects authentication attempts with HTTP 503 rather than bypassing throttling. `initialize()` creates the new table and index for existing UAT databases. Old process-local counters are deliberately not migrated.
+
+This is **not** distributed production state: SQLite requires a single shared local database file and has write-contention limitations. Do not use network filesystem SQLite or deploy multiple independent replicas with separate database files. Production remains **blocked** under issue #6 until PostgreSQL-backed data, shared sessions, shared abuse controls, proxy trust, migrations and multi-instance recovery tests have all passed.
