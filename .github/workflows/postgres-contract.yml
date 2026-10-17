@@ -40,3 +40,14 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f db/postgres/001_foundation.sql
       - name: Test FK constraints and restricted-role RLS
         run: psql -v ON_ERROR_STOP=1 -f tests/postgres_schema_contract.sql
+      - name: Create isolated least-privilege throttle role
+        run: psql -v ON_ERROR_STOP=1 -f tests/postgres_auth_throttle_role.sql
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PostgreSQL adapter for disposable integration tests
+        run: python -m pip install -r requirements-postgres.txt
+      - name: Test shared auth throttle across concurrent processes
+        env:
+          TEAMSAAS_AUTH_RATE_TEST_DSN: postgresql://gather_throttle_ci:only-for-disposable-ci-tests@localhost:5432/gather_contract
+        run: python -m unittest discover -s tests -p 'test_postgres_auth_throttle.py' -v

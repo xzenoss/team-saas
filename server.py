@@ -69,6 +69,22 @@ class ApiError(Exception):
 
 
 def rate_limited(key):
+    backend = os.environ.get('TEAMSAAS_AUTH_RATE_BACKEND', 'memory').strip().lower()
+    if backend == 'postgres':
+        from postgres_rate_limiter import RateStoreUnavailable, postgres_rate_limited
+        try:
+            return postgres_rate_limited(
+                key,
+                dsn=os.environ.get('TEAMSAAS_AUTH_RATE_DSN', ''),
+                secret=os.environ.get('TEAMSAAS_AUTH_RATE_SECRET', ''),
+                window=RATE_WINDOW,
+                limit=RATE_LIMIT,
+            )
+        except RateStoreUnavailable as exc:
+            raise ApiError('Sign-in protection is temporarily unavailable.', 503) from exc
+    if backend != 'memory' or os.environ.get('TEAMSAAS_ENVIRONMENT') == 'production':
+        raise ApiError('Shared sign-in protection must be configured.', 503)
+    # UAT compatibility only: process-local memory is never shared across replicas.
     now = time.time()
     with _rate_lock:
         hits = _rate_hits[key]
