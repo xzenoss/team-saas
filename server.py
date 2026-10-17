@@ -26,7 +26,16 @@ _rate_lock = Lock()
 _rate_hits = defaultdict(deque)
 
 
+def _assert_sqlite_legacy_only():
+    # This legacy HTTP app still uses SQLite for users, sessions and all
+    # workspace data. Do not silently allow production startup just because
+    # an isolated PostgreSQL identity component exists elsewhere.
+    if os.environ.get('TEAMSAAS_ENVIRONMENT', '').strip().lower() in ('prod', 'production'):
+        raise RuntimeError('Legacy SQLite Gather HTTP app cannot run in production.')
+
+
 def connect():
+    _assert_sqlite_legacy_only()
     db = sqlite3.connect(str(DB_PATH), timeout=15)
     db.row_factory = sqlite3.Row
     db.execute('PRAGMA foreign_keys=ON')
@@ -34,6 +43,7 @@ def connect():
 
 
 def initialize():
+    _assert_sqlite_legacy_only()
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     with connect() as db:
         db.executescript('''
