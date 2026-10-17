@@ -30,3 +30,12 @@ docker compose -f docker-compose.uat.yml down
 - n8n is **opt-in** via `docker compose --profile automation -f docker-compose.uat.yml up -d --build`. The existing container image is a nightly candidate, **not validated for production**, and must be reviewed/pinned to an approved release before any internet exposure.
 - Automation webhook requires workspace-owner role, HTTPS by default, and rejects cross-host HTTP redirect chains. Local HTTP is available only with explicit UAT exception to trusted hostnames.
 - For deployment beyond the local machine, enforce TLS, Secure cookies, external authentication/MFA, a trusted reverse proxy, hardened deployment image, per-workspace quotas, tested backups, and security assessments. Never change the localhost binding to 0.0.0.0 without network security review.
+
+
+## Health and correlation boundaries
+
+- `GET /livez` proves only that the HTTP process can answer; it does not touch the database.
+- `GET /readyz` checks database availability and is the container readiness target.
+- `GET /healthz` remains a compatibility alias for readiness.
+- Every JSON/static response carries `X-Request-ID`. A valid incoming bounded request ID is preserved; invalid/missing values are replaced.
+- Server access/error events are emitted as bounded JSON records keyed by request ID. They must not contain credentials or request bodies.
