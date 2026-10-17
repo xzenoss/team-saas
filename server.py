@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import secrets
 import sqlite3
+import sys
 import time
 from collections import defaultdict, deque
 from threading import Lock
@@ -93,6 +94,30 @@ def field(data, key, maximum=160, required=True):
 class Handler(BaseHTTPRequestHandler):
     server_version = 'Gather/1.0'
 
+    def request_id(self):
+        cached = getattr(self, '_request_id', None)
+        if cached:
+            return cached
+        candidate = (self.headers.get('X-Request-ID') or '').strip()
+        if not re.fullmatch(r'[A-Za-z0-9._:-]{1,64}', candidate):
+            candidate = secrets.token_hex(16)
+        self._request_id = candidate
+        return candidate
+
+    def log_event(self, event, **fields):
+        record = {
+            'event': event,
+            'request_id': self.request_id(),
+            'method': self.command,
+            'path': urlparse(self.path).path,
+            **fields,
+        }
+        print(json.dumps(record, separators=(',', ':'), sort_keys=True), file=sys.stderr, flush=True)
+
+    def log_message(self, format, *args):
+        # Avoid the default free-form access log; emit bounded structured events instead.
+        self.log_event('http_access', client=self.client_address[0] if self.client_address else 'unknown')
+
     def send_json(self, data, status=200, cookie=None):
         payload = json.dumps(data).encode()
         self.send_response(status)
@@ -102,6 +127,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Referrer-Policy', 'same-origin')
         self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
         self.send_header('Content-Length', str(len(payload)))
+        self.send_header('X-Request-ID', self.request_id())
         if cookie:
             self.send_header('Set-Cookie', cookie)
         self.end_headers()
@@ -147,12 +173,16 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = urlparse(self.path).path
-        if path == '/healthz':
+        if path == '/livez':
+            self.send_json({'status': 'ok'})
+            return
+        if path in ('/readyz', '/healthz'):
             try:
                 with connect() as db:
                     db.execute('SELECT 1').fetchone()
                 self.send_json({'status': 'ok'})
             except Exception:
+                self.log_event('dependency_unready', dependency='database')
                 self.send_json({'status': 'error'}, 503)
             return
         if path.startswith('/api/'):
@@ -174,6 +204,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-Type', content_type + '; charset=utf-8')
         self.send_header('Content-Length', str(len(payload)))
+        self.send_header('X-Request-ID', self.request_id())
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('Referrer-Policy', 'same-origin')
         self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
@@ -201,7 +232,7 @@ class Handler(BaseHTTPRequestHandler):
         except sqlite3.IntegrityError:
             self.send_json({'error': 'That change conflicts with an existing record.'}, 409)
         except Exception as e:
-            self.log_error('Request failed: %s', type(e).__name__)
+            self.log_event('request_failed', error_type=type(e).__name__)
             self.send_json({'error': 'Something went wrong. Please try again.'}, 500)
 
     def handle_post(self, db, path, data):
